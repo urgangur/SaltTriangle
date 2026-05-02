@@ -15,9 +15,19 @@ export const templateHTML = `
   {{LAYOUTS}}
   {{PASSAGES}}
   {{SCRIPTS}}
-  <script>
-    const engine = new STEngine(passages);
-    engine.startGame();
+  <script defer>
+    (function () {
+      function wait() {
+          if (!window.__createEngine) {
+            return setTimeout(wait, 0);
+          }
+
+          const engine = new STEngine(passages);
+          engine.startGame();
+        }
+
+      wait();
+      })();
   </script>
 </body>
 </html>
