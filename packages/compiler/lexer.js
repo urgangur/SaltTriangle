@@ -13,22 +13,22 @@ export function tokenize(input) {
         // passage header
         { type: "PASSAGE_HEADER", reg: /^::\s*([\w-+.]+)(?:\s+\[([\w.+-]+)\])?(?:\s+\[(.*?)\])?/ },
         // @{...}
-        { type: "BLOCK_END", reg: /^@\{end\}/ },
-        { type: "BLOCK_START", reg: /^@\{[\w-+.]+\}/ },
+        { type: "BLOCK_END", reg: /^@\{\s*end\s*\}/ },
+        { type: "BLOCK_START", reg: /^@\{\s*([\w-+.]+)\s*\}/ },
+        // comments /**/ and //
+        { type: "COMMENT", reg: /^(\/\/.*|\/\*[\s\S]*?\*\/)/ },
         // control flow
-        { type: "IF", reg: /^\$\{\s*if\s+(.*?)\}/ },
-        { type: "ELIF", reg: /^\$\{\s*elif\s+(.*?)\}/ },
+        { type: "IF", reg: /^\$\{\s*if\s+(.*?)\s*\}/ },
+        { type: "ELIF", reg: /^\$\{\s*elif\s+(.*?)\s*\}/ },
         { type: "ELSE", reg: /^\$\{\s*else\}/ },
         { type: "IF_END", reg: /^\$\{\s*\/if\}/ },
 
         { type: "FOR", reg: /^\$\{\s*for\s+(_\w+)\s*,\s*(_\w+)\s+in\s+(.*?)\}/ },
         { type: "FOR_END", reg: /^\$\{\s*\/for\}/ },
-        // expression
-        { type: "EXPRESSION", reg: /^\$\{\s*=(.*?)\}/ },
+        // expression (only show var)
+        { type: "EXPRESSION", reg: /^\$\{\s*=\s*([$|_]\w+(?:\.[\w]+|\[\d+\]|\["[^"]+"\]|\['[^']+'\])*)\s*\}/ },
         // link #{text|passageId(optional)}{codeBlock}
-        { type: "LINK", reg: /^\#\{("[^"]+"|'[^']+'|\$[\w.\[\]\$"']+|\_[\w.\[\]\$"']+)(?:\|("[^"]+"|'[^']+'|\$[\w.\[\]\$"']+|\_[\w.\[\]\$"']+))?\}/ },
-        // comments /**/ and //
-        { type: "COMMENT", reg: /^(\/\/.*|\/\*[\s\S]*?\*\/)/ }
+        { type: "LINK", reg: /^\#\{\s*("[^"]+"|'[^']+'|\$[\w.\[\]\$"']+|\_[\w.\[\]\$"']+)\s*(?:\|\s*("[^"]+"|'[^']+'|\$[\w.\[\]\$"']+|\_[\w.\[\]\$"']+)\s*)?\}/ }
     ];
 
     let cursor = 0;
@@ -37,10 +37,16 @@ export function tokenize(input) {
         let substring = input.slice(cursor);
         for (const pattern of patterns) {
             match = substring.match(pattern.reg);
-            if (match) {
-                if (pattern.type === "LINK") {
+            if (!match) continue;
+            switch (pattern.type) {
+                case 'LINK':
                     cursor += match[0].length;
                     substring = input.slice(cursor);
+                    // 處理#{} ... {} 
+                    while (/\s/.test(substring[0])) {
+                        cursor++;
+                        substring = input.slice(cursor);
+                    }
                     if (!substring.startsWith("{")) throw new Error("Invalid link syntax");
                     let depth = 1;
                     let i = 1;
@@ -61,25 +67,71 @@ export function tokenize(input) {
                     if (depth!== 0) throw new Error("Unclosed link code block");
                     tokens.push({
                         type: "LINK",
-                        raw: match[0],
+                        raw: match[1],
+                        nextPassage: match[2] || null,
                         content: substring.slice(1, i),
                     });
-                    cursor += i;
+                    cursor += i + 1;
                     break;
-                }
-                else if (pattern.type !== "COMMENT") {
+                case 'BLOCK_START':
+                    tokens.push({
+                        type: "BLOCK_START",
+                        name: match[1],
+                    });
+                    cursor += match[0].length;
+                    break;
+                case 'BLOCK_END':
+                    tokens.push({
+                        type: "BLOCK_END",
+                    });
+                    cursor += match[0].length;
+                    break;
+                case 'EXPRESSION':
+                    tokens.push({
+                            type: "EXPRESSION",
+                            expr: match[1],
+                        });
+                    cursor += match[0].length;
+                    break;
+                case 'IF':
+                    tokens.push({
+                            type: "IF",
+                            condition: match[1],
+                        });
+                    cursor += match[0].length;
+                    break;
+                case 'ELIF':
+                    tokens.push({
+                            type: "ELIF",
+                            condition: match[1],
+                        });
+                    cursor += match[0].length;
+                    break;
+                case 'FOR':
+                    tokens.push({
+                        type: "FOR",
+                        k: match[1],
+                        v: match[2],
+                        iterable: match[3]
+                    });
+                    cursor += match[0].length;
+                    break;
+                case 'COMMENT':
+                    cursor += match[0].length;
+                    break
+                default:
                     tokens.push({
                         type: pattern.type,
                         raw: match[0],
                     });
                     cursor += match[0].length;
-                }
-                break;
-            };
+                    break
+            }
+            if (match) break;
         }
         if (!match) {
             const nextSpecialChar = substring.slice(1).search(/::|@\{|\$\{|\#\{|\/\/|\/\*/);
-            const textLen = (nextSpecialChar === -1) ? substring.length : nextSpecialChar;
+            const textLen = (nextSpecialChar === -1) ? substring.length : nextSpecialChar + 1;
             tokens.push({
                 type: "TEXT",
                 raw: substring.slice(0, textLen)
