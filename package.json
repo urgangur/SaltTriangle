@@ -1,0 +1,23 @@
+{
+  "name": "salt-triangle-compiler",
+  "version": "0.0.1",
+  "type": "module",
+  "bin": "packages/cli/build.js",
+  "pkg": {
+    "assets": [
+      "packages/compiler/*.js",
+      "packages/engine/*.js"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ]
+  },
+  "scripts": {
+    "prep": "node ./prep.js",
+    "bundle": "npm run prep && npx esbuild packages/cli/build.js --bundle --platform=node --format=cjs --outfile=packages/cli/bundle.js && npx pkg packages/cli/bundle.js --target node18-win-x64 --output build.exe"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0",
+    "pkg": "^5.8.1"
+  }
+}
