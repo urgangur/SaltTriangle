@@ -1,0 +1,30 @@
+ST/
+    blabla
+
+npm run bundle
+-> build.exe
+
+project/
+    build.exe
+    config.json
+    game/
+        .st檔
+    assets/
+        圖片 影片資源
+    layouts/
+        layout.html
+        ...
+    module/
+        可能一些js檔案 和 CSS
+
+->
+
+dist/
+    index.html
+    assets/
+        圖片 影片資源
+    saves/
+        存檔資料夾
+    layouts/
+        layout.html
+        ...
