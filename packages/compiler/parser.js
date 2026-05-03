@@ -26,6 +26,7 @@ export function parse(tokens) {
                     layout: layout,
                     tags: tags ? tags.split(/\s*,\s*/) : [],
                     onEnter: null,
+                    afterRendered: null,
                     onExit: null,
                     slots: {}
                 };
@@ -36,7 +37,7 @@ export function parse(tokens) {
                 if (currentSlot) throw new Error("Starting a new block inside another block");
                 currentSlot = token.name;
 
-                if (currentSlot === 'onEnter' || currentSlot === 'onExit') {
+                if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') {
                     scriptBuffer = "";
                 } else {
                     currentPassage.slots[currentSlot] = [];
@@ -49,6 +50,8 @@ export function parse(tokens) {
 
                 if (currentSlot === 'onEnter') {
                     currentPassage.onEnter = scriptBuffer;
+                } else if (currentSlot === 'afterRendered') {
+                    currentPassage.afterRendered = scriptBuffer;
                 } else if (currentSlot === 'onExit') {
                     currentPassage.onExit = scriptBuffer;
                 }
@@ -58,7 +61,7 @@ export function parse(tokens) {
             case 'TEXT':
                 if (!currentPassage || !currentSlot) break;
 
-                if (currentSlot === 'onEnter' || currentSlot === 'onExit') {
+                if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') {
                     scriptBuffer += token.raw;
                     break;
                 }
@@ -78,7 +81,7 @@ export function parse(tokens) {
 
             case 'IF':
                 if (!currentPassage) break;
-                if (currentSlot === 'onEnter' || currentSlot === 'onExit') throw new Error(`IF is not allowed in "${currentSlot}`);
+                if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') throw new Error(`IF is not allowed in "${currentSlot}`);
                 const ifNode = {
                     type: 'IF',
                     branches: [{
@@ -94,7 +97,7 @@ export function parse(tokens) {
             
             case 'ELIF':
                 if (!currentPassage) break;
-                if (currentSlot === 'onEnter' || currentSlot === 'onExit') throw new Error(`ELIF is not allowed in "${currentSlot}`);
+                if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') throw new Error(`ELIF is not allowed in "${currentSlot}`);
                 nodeStack.pop(); // pop previous branch
                 const lastIfNodE = nodeStack[nodeStack.length - 1];
                 if (!lastIfNodE || lastIfNodE.type !== 'IF') throw new Error(`ELIF without IF`);
@@ -108,7 +111,7 @@ export function parse(tokens) {
 
             case 'ELSE':
                 if (!currentPassage) break;
-                if (currentSlot === 'onEnter' || currentSlot === 'onExit') throw new Error(`ELSE is not allowed in "${currentSlot}`);
+                if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') throw new Error(`ELSE is not allowed in "${currentSlot}`);
                 nodeStack.pop(); // pop previous branch
                 const lastIfNode = nodeStack[nodeStack.length - 1];
                 if (!lastIfNode || lastIfNode.type !== 'IF') throw new Error(`ELSE without IF`);
@@ -122,7 +125,7 @@ export function parse(tokens) {
 
             case 'IF_END':
                 if (!currentPassage) break;
-                if (currentSlot === 'onEnter' || currentSlot === 'onExit') throw new Error(`IF_END is not allowed in "${currentSlot}`);
+                if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') throw new Error(`IF_END is not allowed in "${currentSlot}`);
                 nodeStack.pop();
                 const lastIfNoDe = nodeStack.pop();;
                 if (!lastIfNoDe || lastIfNoDe.type !== 'IF') throw new Error(`IF_END without IF`);
@@ -130,7 +133,7 @@ export function parse(tokens) {
 
             case 'FOR':
                 if (!currentPassage) break;
-                if (currentSlot === 'onEnter' || currentSlot === 'onExit') throw new Error(`FOR is not allowed in "${currentSlot}`);
+                if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') throw new Error(`FOR is not allowed in "${currentSlot}`);
                 const forNode = {
                     type: 'FOR',
                     k: token.k,
@@ -144,14 +147,14 @@ export function parse(tokens) {
 
             case 'FOR_END':
                 if (!currentPassage) break;
-                if (currentSlot === 'onEnter' || currentSlot === 'onExit') throw new Error(`FOR_END is not allowed in "${currentSlot}`);
+                if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') throw new Error(`FOR_END is not allowed in "${currentSlot}`);
                 const lastForNode = nodeStack.pop();
                 if (!lastForNode || lastForNode.type !== 'FOR') throw new Error(`FOR_END without FOR`);
                 break;
 
             case 'EXPRESSION':
                 if (!currentPassage) break;
-                if (currentSlot === 'onEnter' || currentSlot === 'onExit') throw new Error(`EXPRESSION is not allowed in "${currentSlot}`);
+                if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') throw new Error(`EXPRESSION is not allowed in "${currentSlot}`);
                 currentContainer().push({
                     type: 'EXPRESSION',
                     expr: token.expr
@@ -160,7 +163,7 @@ export function parse(tokens) {
 
             case 'LINK':
                 if (!currentPassage) break;
-                if (currentSlot === 'onEnter' || currentSlot === 'onExit') throw new Error(`LINK is not allowed in "${currentSlot}`);
+                if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') throw new Error(`LINK is not allowed in "${currentSlot}`);
 
                 currentPassage.slots[currentSlot].push({
                     type: 'LINK',

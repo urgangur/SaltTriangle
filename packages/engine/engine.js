@@ -130,9 +130,10 @@ window.STEngine = class STEngine {
         const scope = this.createScope(ctx, engine);
 
         this.currentPassage = passage;
-        if (passage.onEnter) this.runScript(passage.onEnter, ctx, engine, scope);;
+        if (passage.onEnter) this.runScript(passage.onEnter, ctx, engine, scope);
 
         this.render(passage, ctx);
+        if (passage.afterRendered) this.runScript(passage.afterRendered, ctx, engine, scope);
     }
 
     goTo(passageId, action) {
@@ -183,6 +184,7 @@ window.STEngine = class STEngine {
         }
 
         root.innerHTML = layoutHtml;
+
         root.onclick = (e) => {
             const el = e.target.closest('[passage-next]');
             if (!el) return;
