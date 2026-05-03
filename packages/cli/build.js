@@ -52,6 +52,7 @@ export function passagesToJS(passages) {
         output += `    layout: ${JSON.stringify(passage.layout)},\n`;
         output += `    tags: ${JSON.stringify(passage.tags)},\n`;
         output += `    onEnter: ${passage.onEnter ? JSON.stringify(passage.onEnter) : "null"},\n`;
+        output += `    afterRendered: ${passage.afterRendered ? JSON.stringify(passage.afterRendered) : "null"},\n`;
         output += `    onExit: ${passage.onExit ? JSON.stringify(passage.onExit) : "null"},\n`;
         
         output += `    slots: {\n`;
