@@ -133,7 +133,11 @@ window.STEngine = class STEngine {
         if (passage.onEnter) this.runScript(passage.onEnter, ctx, engine, scope);
 
         this.render(passage, ctx);
-        if (passage.afterRendered) this.runScript(passage.afterRendered, ctx, engine, scope);
+        if (passage.afterRendered) {
+            requestAnimationFrame(() => {
+                this.runScript(passage.afterRendered, ctx, engine, scope);
+            });
+        }
     }
 
     goTo(passageId, action) {
