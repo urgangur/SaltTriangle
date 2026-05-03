@@ -169,8 +169,8 @@ let html = templateHTML
 html = html.split("{{TITLE}}").join(config.title);
 html = html.split("{{ICON}}").join(config.icon ? `<link rel="icon" href="${config.icon}">` : "");
 html = html.split("{{CSS}}").join(cssInline);
-html = html.split("{{ENGINE}}").join("<script type='module'>" + ENGINE_CODE + ";window.__createEngine = true" + "</script>");
-html = html.split("{{EVALEXPR}}").join("<script type='module'>" + EVALEXPR_CODE + "</script>")
+html = html.split("{{ENGINE}}").join("<script type='module'>" + ENGINE_CODE + ";window.__EngineReady = true" + "</script>");
+html = html.split("{{EVALEXPR}}").join("<script type='module'>" + EVALEXPR_CODE + ";window.__EvalexprReady = true" + "</script>")
 html = html.split("{{STATE}}").join("<script>" + STATE_CODE + "</script>");
 html = html.split("{{LAYOUTS}}").join("<script>" + layoutsScript + "</script>");
 html = html.split("{{PASSAGES}}").join("<script>" + passagesToJS(passages) + "</script>");

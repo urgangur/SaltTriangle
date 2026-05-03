@@ -18,7 +18,7 @@ export const templateHTML = `
   <script defer>
     (function () {
       function wait() {
-          if (!window.__createEngine) {
+          if (!(window.__EvalexprReady && window.__EngineReady)) {
             return setTimeout(wait, 0);
           }
 
