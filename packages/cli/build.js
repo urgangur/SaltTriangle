@@ -106,7 +106,7 @@ if (!fs.existsSync(layoutSrc)) throw new Error("Layouts not found")
 const layoutsData = loadLayouts(layoutSrc)
 let layoutsScript = "window.STLayouts = {\n";
 for (const [key, value] of Object.entries(layoutsData)) {
-    layoutsScript += `  "${key}": \`${JSON.stringify(value)}\`,\n`;
+    layoutsScript += `  "${key}": ${JSON.stringify(value)},\n`;
 }
 layoutsScript += "};";
 
