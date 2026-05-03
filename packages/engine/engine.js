@@ -121,15 +121,6 @@ window.STEngine = class STEngine {
         });
     }
 
-    bindLinks(root) {
-        root.querySelectorAll('[passage-next]').forEach(el => {
-            el.onclick = () => {
-                const next = el.getAttribute('passage-next');
-                this.goTo(next);
-            };
-        });
-    }
-
     runPassage(passageId) {
         const passage = this.passages[passageId];
         if (!passage) throw new Error(`Passage "${passageId}" not found.`);
@@ -192,6 +183,13 @@ window.STEngine = class STEngine {
         }
 
         root.innerHTML = layoutHtml;
+        root.onclick = (e) => {
+            const el = e.target.closest('[passage-next]');
+            if (!el) return;
+
+            const next = el.getAttribute('passage-next');
+            this.goTo(next);
+        };
     }
 
     startGame() {
