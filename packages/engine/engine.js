@@ -1,3 +1,18 @@
+const ActionRegistry = {
+    _cache: new Map(),
+    _counter: 0,
+    register(actionScript) {
+        const id = `act_${this._counter++}`;
+        this._cache.set(id, actionScript);
+        return id;
+    },
+    get(id) { return this._cache.get(id); },
+    clear() {
+        this._cache.clear();
+        this._counter = 0;
+    }
+};
+
 function renderNode(node, ctx) {
     switch (node.type) {
         case 'TEXT':
@@ -8,7 +23,8 @@ function renderNode(node, ctx) {
 
         case 'LINK': 
             const label = stEvalExpr(node.value, ctx) ?? node.value;
-            return `<a href="javascript:void(0)" passage-next="${node.nextPassage}">
+            const actionId = ActionRegistry.register(node.content)
+            return `<a href="javascript:void(0)" passage-next="${node.nextPassage}" data-action-id="${actionId}">
                         ${label}
                     </a>`;
 
@@ -130,6 +146,9 @@ window.STEngine = class STEngine {
         const scope = this.createScope(ctx, engine);
 
         this.currentPassage = passage;
+        ctx.currPassage = passageId;
+        // -- 這裡要補充產生快照的功能，之後才能實現回溯
+
         if (passage.onEnter) this.runScript(passage.onEnter, ctx, engine, scope);
 
         this.render(passage, ctx);
@@ -140,12 +159,13 @@ window.STEngine = class STEngine {
         }
     }
 
-    goTo(passageId, action) {
+    goTo(passageId, actionId) {
         const ctx = State;
         const engine = { api: this.createAPI(ctx)};
         const scope = this.createScope(ctx, engine);
 
-        if (action) {
+        if (actionId && ActionRegistry.get(actionId)) {
+            const action = ActionRegistry.get(actionId);
             const actionScope = this.createScope(ctx, engine);
             this.runScript(action, ctx, engine, actionScope);
         }
@@ -163,6 +183,7 @@ window.STEngine = class STEngine {
 
     render(passage, ctx) {
         const root = document.getElementById('st-main');
+        ActionRegistry.clear();
         const renderedSlots = {};
         let layoutHtml = window.STLayouts[passage.layout];
 
@@ -193,12 +214,13 @@ window.STEngine = class STEngine {
             const el = e.target.closest('[passage-next]');
             if (!el) return;
 
-            const next = el.getAttribute('passage-next');
-            this.goTo(next);
+            const nextPassage = el.getAttribute('passage-next');
+            const actionId = el.getAttribute('data-action-id');
+            this.goTo(nextPassage, actionId);
         };
     }
 
     startGame() {
-        this.runPassage(State.nextPassage);
+        this.runPassage(State.currPassage);
     }
 }
