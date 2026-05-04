@@ -1,0 +1,4 @@
+{
+    "main": "packages/cli/bundle.js",
+    "output": "sea-prep.blob"
+}
