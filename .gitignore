@@ -2,4 +2,3 @@ node_modules/
 packages/cli/assets_manifest.js
 packages/cli/bundle.js
 build.exe
-package-lock.json
