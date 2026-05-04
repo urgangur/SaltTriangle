@@ -1,0 +1,16 @@
+v0.1.0
+實作了最基本的運作邏輯
+ - IF、FOR、EXPRESSION節點
+ - LINK跳轉
+ - onEnter、onExit hook
+ - layout功能
+ - module功能
+ - build
+
+v0.1.1
+添加了afterRendered hook
+添加了部分文檔
+fix: 會顯示多餘的"
+
+v0.1.2
+fix: link action無運作的問題
