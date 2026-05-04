@@ -2,3 +2,4 @@ node_modules/
 packages/cli/assets_manifest.js
 packages/cli/bundle.js
 build.exe
+sea-prep.blob
