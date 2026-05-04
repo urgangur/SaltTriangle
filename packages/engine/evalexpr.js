@@ -401,11 +401,7 @@ function resolvePath(path, ctx) {
   return obj;
 }
 
-// =========================
-// Public API
-// =========================
-
-window.stEvalExpr = function (input, context) {
+const stEvalExpr = function (input, context) {
   const tokens = tokenize(input);
   const rpn = toRPN(tokens);
   return evaluateRPN(rpn, context);
