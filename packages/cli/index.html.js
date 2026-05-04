@@ -10,7 +10,6 @@ export const templateHTML = `
 <body>
   <div id="st-main"></div>
   {{ENGINE}}
-  {{EVALEXPR}}
   {{STATE}}
   {{LAYOUTS}}
   {{PASSAGES}}
@@ -18,11 +17,11 @@ export const templateHTML = `
   <script defer>
     (function () {
       function wait() {
-          if (!(window.__EvalexprReady && window.__EngineReady)) {
+          if (!(window.__EngineReady)) {
             return setTimeout(wait, 0);
           }
 
-          const engine = new STEngine(passages);
+          const engine = new STEngine(STPassages);
           engine.startGame();
         }
 
