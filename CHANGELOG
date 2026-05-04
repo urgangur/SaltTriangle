@@ -14,3 +14,8 @@ fix: 會顯示多餘的"
 
 v0.1.2
 fix: link action無運作的問題
+
+v0.1.3
+改變了build流程，使用SEA來打包
+上傳package-lock
+fix: stEvalExpr無法讀取變數 和 while迴圈無法跳出
