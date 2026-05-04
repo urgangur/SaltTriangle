@@ -137,7 +137,7 @@ function parsePath(input, start) {
 
   function readIdentifier() {
     let s = "";
-    while (/[a-zA-Z0-9_$]/.test(input[i])) {
+    while (i < input.length && /[a-zA-Z0-9_$]/.test(input[i])) {
       s += input[i++];
     }
     return s;
@@ -373,7 +373,7 @@ function hasOwn(obj, key) {
 }
 
 function resolvePath(path, ctx) {
-  let obj = path.root === "$" ? ctx.global : ctx.local;
+  let obj = path.root === "$" ? ctx.variables : ctx.variables.__temp;
 
   for (const seg of path.segments) {
     if (obj == null) return undefined;
@@ -401,8 +401,8 @@ function resolvePath(path, ctx) {
   return obj;
 }
 
-const stEvalExpr = function (input, context) {
+const stEvalExpr = function (input, ctx) {
   const tokens = tokenize(input);
   const rpn = toRPN(tokens);
-  return evaluateRPN(rpn, context);
+  return evaluateRPN(rpn, ctx);
 }
