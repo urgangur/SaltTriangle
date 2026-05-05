@@ -165,7 +165,7 @@ export function parse(tokens) {
                 if (!currentPassage) break;
                 if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') throw new Error(`LINK is not allowed in "${currentSlot}`);
 
-                currentPassage.slots[currentSlot].push({
+                currentContainer().push({
                     type: 'LINK',
                     value: token.raw,
                     nextPassage: token.nextPassage ? token.nextPassage.replace(/^["']|["']$/g, '') : currentPassage.id,
