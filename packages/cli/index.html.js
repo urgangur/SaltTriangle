@@ -23,6 +23,7 @@ export const templateHTML = `
 
           const engine = new STEngine(STPassages);
           engine.startGame();
+          window.engine = engine;
         }
 
       wait();
