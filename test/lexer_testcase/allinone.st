@@ -53,4 +53,20 @@ why you name layout like that.
         you so poor!
     ${/if}
     your skin color is ${ = $player.apperance["skinColor"]}
+
+${for _id, _b in _hasSave}
+    <div class='lg-slot'>
+        <div class="lg-slot-info">
+            <div>槽位 ${= _id}</div>
+            <div>${if _b}${= _date[_id]}${else}空位${/if}</div>
+        </div>
+        <div class="lg-slot-actions">
+            ${if _b}
+                <button class="lg-load-btn" onclick="engine.load('${= _id}')">讀取</button>
+            ${else}
+                <button class="lg-load-btn" disabled>讀取</button>
+            ${/if}
+        </div>
+    </div>
+${/for}
 @{end}
