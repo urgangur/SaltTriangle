@@ -1,4 +1,4 @@
-// AI generated code.
+// AI-generated code.
 
 class EvalExprError extends Error {
   constructor(code, message, pos) {

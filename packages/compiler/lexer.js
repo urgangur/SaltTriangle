@@ -53,7 +53,7 @@ export function tokenize(input) {
                     let inString = null;
                     while (i < substring.length) {
                         const ch = substring[i];
-                        if (ch === "'"|| ch === '"') {
+                        if (ch === "'" || ch === '"') {
                             if (!inString) inString = ch;
                             else if (inString === ch && !isEscaped(substring, i)) inString = null;
                         }
@@ -64,7 +64,7 @@ export function tokenize(input) {
                         if (depth === 0) break;
                         i++;
                     };
-                    if (depth!== 0) throw new Error("Unclosed link code block");
+                    if (depth !== 0) throw new Error("Unclosed link code block");
                     tokens.push({
                         type: "LINK",
                         raw: match[1],
@@ -88,23 +88,23 @@ export function tokenize(input) {
                     break;
                 case 'EXPRESSION':
                     tokens.push({
-                            type: "EXPRESSION",
-                            expr: match[1],
-                        });
+                        type: "EXPRESSION",
+                        expr: match[1],
+                    });
                     cursor += match[0].length;
                     break;
                 case 'IF':
                     tokens.push({
-                            type: "IF",
-                            condition: match[1],
-                        });
+                        type: "IF",
+                        condition: match[1],
+                    });
                     cursor += match[0].length;
                     break;
                 case 'ELIF':
                     tokens.push({
-                            type: "ELIF",
-                            condition: match[1],
-                        });
+                        type: "ELIF",
+                        condition: match[1],
+                    });
                     cursor += match[0].length;
                     break;
                 case 'FOR':
