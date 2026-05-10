@@ -1,3 +1,13 @@
+# v0.2.1 [2026/5/11]
+Added
+ - API: add getSaveMeta function
+Changed
+ - Script Block: would not fetch engine but only api
+ - Autosave: would not auto save when passage.tags includes "nosave"
+Fixed
+ - Core Logics: fix FIR node not being handled correctly
+ - Lexer: fix EXPRESSION node not handle correctly at some cases
+
 # v0.2.0 [2026/5/10]
 Added
  - API: implement save, load, import, export functions
