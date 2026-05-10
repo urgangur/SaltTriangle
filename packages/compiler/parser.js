@@ -1,3 +1,123 @@
+/**
+ * AI-generated code
+ * note that:
+ *   can't handle regex correctly (i won't fix this, wtf you have to write regex here)
+ */
+function transformScript(script) {
+    // ── States ────────────────────────────────────────────────────
+    const S_CODE = 0; // normal code
+    const S_LCMT = 1; // line comment   //
+    const S_BCMT = 2; // block comment  /* */
+    const S_SQ = 3; // single-quoted  '...'
+    const S_DQ = 4; // double-quoted  "..."
+    const S_TMPL = 5; // template       `...`
+
+    const out = [];
+    let state = S_CODE;
+    let i = 0;
+
+    // Each entry = brace depth for one active ${...} interpolation.
+    // Allows nested braces and nested template literals inside interpolations.
+    const interpDepths = [];
+
+    function isIdentChar(ch) { return ch !== undefined && /[a-zA-Z0-9_$]/.test(ch); }
+
+    while (i < script.length) {
+        const ch = script[i];
+        const next = script[i + 1];
+
+        switch (state) {
+
+            case S_CODE: {
+                // Enter comment
+                if (ch === '/' && next === '/') { out.push('//'); i += 2; state = S_LCMT; break; }
+                if (ch === '/' && next === '*') { out.push('/*'); i += 2; state = S_BCMT; break; }
+
+                // Enter string / template
+                if (ch === "'") { out.push("'"); i++; state = S_SQ; break; }
+                if (ch === '"') { out.push('"'); i++; state = S_DQ; break; }
+                if (ch === '`') { out.push('`'); i++; state = S_TMPL; break; }
+
+                // Track braces inside a template interpolation
+                if (interpDepths.length > 0) {
+                    if (ch === '{') {
+                        interpDepths[interpDepths.length - 1]++;
+                        out.push(ch); i++; break;
+                    }
+                    if (ch === '}') {
+                        if (interpDepths[interpDepths.length - 1] > 0) {
+                            interpDepths[interpDepths.length - 1]--;
+                            out.push(ch); i++;
+                        } else {
+                            interpDepths.pop();         // close ${ ... }
+                            out.push(ch); i++;
+                            state = S_TMPL;
+                        }
+                        break;
+                    }
+                }
+
+                // Sigil identifier: $xxx or _xxx (not preceded by . or \w)
+                const prevCh = i > 0 ? script[i - 1] : '';
+                const freeStand = !/[.\w$_]/.test(prevCh);
+
+                if (freeStand && ch === '$' && /[a-zA-Z_$]/.test(next ?? '')) {
+                    let j = i;
+                    while (j < script.length && isIdentChar(script[j])) j++;
+                    out.push('scope.', script.slice(i, j));
+                    i = j; break;
+                }
+                if (freeStand && ch === '_' && /[a-zA-Z_$]/.test(next ?? '')) {
+                    let j = i;
+                    while (j < script.length && isIdentChar(script[j])) j++;
+                    out.push('scope.', script.slice(i, j));
+                    i = j; break;
+                }
+
+                out.push(ch); i++;
+                break;
+            }
+
+            case S_LCMT:
+                out.push(ch);
+                if (ch === '\n') state = S_CODE;
+                i++;
+                break;
+
+            case S_BCMT:
+                if (ch === '*' && next === '/') { out.push('*/'); i += 2; state = S_CODE; }
+                else { out.push(ch); i++; }
+                break;
+
+            case S_SQ:
+                if (ch === '\\') { out.push(ch, next ?? ''); i += 2; }
+                else if (ch === "'") { out.push(ch); i++; state = S_CODE; }
+                else { out.push(ch); i++; }
+                break;
+
+            case S_DQ:
+                if (ch === '\\') { out.push(ch, next ?? ''); i += 2; }
+                else if (ch === '"') { out.push(ch); i++; state = S_CODE; }
+                else { out.push(ch); i++; }
+                break;
+
+            case S_TMPL:
+                if (ch === '\\') { out.push(ch, next ?? ''); i += 2; }
+                else if (ch === '`') { out.push(ch); i++; state = S_CODE; }
+                else if (ch === '$' && next === '{') {
+                    out.push('${'); i += 2;
+                    interpDepths.push(0);  // new interpolation level
+                    state = S_CODE;
+                }
+                else { out.push(ch); i++; }
+                break;
+        }
+    }
+
+    return out.join('');
+}
+
+
 export function parse(tokens) {
     const passages = {};
     let currentPassage = null;
@@ -13,6 +133,7 @@ export function parse(tokens) {
     }
 
     for (const token of tokens) {
+        const L = token.line !== undefined ? `[Line ${token.line}] ` : '';
         switch (token.type) {
             case 'PASSAGE_HEADER':
                 const headerRegex = /^::\s*([\w-+.]+)(?:\s+\[\s*([\w.+-]+)\s*\])(?:\s+\[(.*?)\])?/
@@ -49,11 +170,11 @@ export function parse(tokens) {
                 if (!currentSlot) throw new Error("Ending a block without starting one");
 
                 if (currentSlot === 'onEnter') {
-                    currentPassage.onEnter = scriptBuffer;
+                    currentPassage.onEnter = transformScript(scriptBuffer);
                 } else if (currentSlot === 'afterRendered') {
-                    currentPassage.afterRendered = scriptBuffer;
+                    currentPassage.afterRendered = transformScript(scriptBuffer);
                 } else if (currentSlot === 'onExit') {
-                    currentPassage.onExit = scriptBuffer;
+                    currentPassage.onExit = transformScript(scriptBuffer);
                 }
                 currentSlot = null;
                 break;
@@ -94,7 +215,7 @@ export function parse(tokens) {
                 nodeStack.push(ifNode);
                 nodeStack.push(ifNode.branches[0]);
                 break;
-            
+
             case 'ELIF':
                 if (!currentPassage) break;
                 if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') throw new Error(`ELIF is not allowed in "${currentSlot}`);
@@ -169,7 +290,7 @@ export function parse(tokens) {
                     type: 'LINK',
                     value: token.raw,
                     nextPassage: token.nextPassage ? token.nextPassage.replace(/^["']|["']$/g, '') : currentPassage.id,
-                    content: token.content
+                    content: transformScript(token.content)
                 });
                 break;
 

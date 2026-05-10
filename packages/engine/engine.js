@@ -21,7 +21,7 @@ function renderNode(node, ctx) {
         case 'EXPRESSION':
             return String(stEvalExpr(node.expr, ctx));
 
-        case 'LINK': 
+        case 'LINK':
             const label = stEvalExpr(node.value, ctx) ?? node.value;
             const actionId = ActionRegistry.register(node.content)
             return `<a href="javascript:void(0)" passage-next="${node.nextPassage}" data-action-id="${actionId}">
@@ -96,42 +96,132 @@ function renderFor(node, ctx) {
 }
 
 window.STEngine = class STEngine {
-    constructor (passages) {
+    constructor(passages) {
         this.passages = passages;
         this.currentPassage = null;
     }
 
     runScript(script, ctx, engine, scope) {
-        return new Function("State", "engine", "scope", `
-            with (scope) {
-                ${script}
-            }
-            `)(ctx, engine, scope);
+        return new Function('State', 'engine', 'scope', 'api', script)(ctx, engine, scope, engine.api);
     }
 
     createAPI(ctx) {
         return {
             clearTemp: () => {
                 Object.keys(ctx.variables.__temp).forEach(k => delete ctx.variables.__temp[k]);
-            }
+            },
+            save: (slot = 'default') => this.save(slot),
+            load: (slot = 'default') => this.load(slot),
+            export: (filename) => this.export(filename),
+            import: () => this.import()
         }
     }
 
-    createScope(ctx, engine) {
+    save(slot = 'default') {
+        try {
+            const dataToSave = this.currentSnapshot;
+            localStorage.setItem(`st_save_${slot}`, dataToSave);
+            // -- save meta --
+            let meta = {};
+            try {
+                meta = JSON.parse(localStorage.getItem('st_saveMeta')) || {};
+            } catch (e) { }
+
+            meta[slot] = { date: Date.now() };
+
+            localStorage.setItem('st_saveMeta', JSON.stringify(meta));
+            // -------------
+            return true;
+        } catch (e) {
+            console.error("Save failed:", e);
+            return false;
+        }
+    }
+
+    getSaveMeta() {
+        try {
+            return JSON.parse(localStorage.getItem('st_saveMeta')) || {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    load(slot = 'default') {
+        try {
+            const data = localStorage.getItem(`st_save_${slot}`);
+            if (!data) return false;
+            Object.keys(State).forEach(key => delete State[key]);
+            const parsedData = JSON.parse(data);
+            Object.assign(State, parsedData);
+            this.runPassage(parsedData.currPassage);
+            return true;
+        } catch (e) {
+            console.error("Load failed:", e);
+            return false;
+        }
+    }
+
+    export(filename = 'save.json') {
+        try {
+            const data = this.currentSnapshot;
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            return true;
+        } catch (e) {
+            console.error("Export failed:", e);
+            return false;
+        }
+    }
+
+    import() {
+        return new Promise((resolve) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            input.onchange = e => {
+                const file = e.target.files?.[0];
+                if (!file) {
+                    resolve(false);
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        const parsedData = JSON.parse(event.target.result);
+                        Object.keys(State).forEach(key => delete State[key]);
+                        Object.assign(State, parsedData);
+                        this.runPassage(parsedData.currPassage);
+                        resolve(true);
+                    } catch (err) {
+                        console.error("Import failed:", err);
+                        resolve(false);
+                    }
+                };
+                reader.onerror = () => resolve(false);
+                reader.readAsText(file);
+            };
+            input.click();
+        });
+    }
+
+    createScope(ctx) {
         return new Proxy({}, {
-            has() { return true; },
             get(_, key) {
-                if (typeof key ==='symbol') return undefined;
-                if (key === 'api') return engine.api;
-                if (key === 'engine') return engine;
+                if (typeof key === 'symbol') return undefined;
                 if (key.startsWith('_')) return ctx.variables.__temp[key.slice(1)];
                 if (key.startsWith('$')) return ctx.variables[key.slice(1)];
-                return globalThis[key];
+                return undefined;
             },
             set(_, key, value) {
                 if (key.startsWith('_')) ctx.variables.__temp[key.slice(1)] = value;
                 else if (key.startsWith('$')) ctx.variables[key.slice(1)] = value;
-                else globalThis[key] = value;
                 return true;
             }
         });
@@ -142,12 +232,14 @@ window.STEngine = class STEngine {
         if (!passage) throw new Error(`Passage "${passageId}" not found.`);
 
         const ctx = State;
-        const engine = { api: this.createAPI(ctx)};
-        const scope = this.createScope(ctx, engine);
+        const engine = { api: this.createAPI(ctx) };
+        const scope = this.createScope(ctx);
 
         this.currentPassage = passage;
         ctx.currPassage = passageId;
-        // -- 這裡要補充產生快照的功能，之後才能實現回溯
+
+        this.currentSnapshot = JSON.stringify(ctx);
+        this.save('auto');
 
         if (passage.onEnter) this.runScript(passage.onEnter, ctx, engine, scope);
 
@@ -161,12 +253,12 @@ window.STEngine = class STEngine {
 
     goTo(passageId, actionId) {
         const ctx = State;
-        const engine = { api: this.createAPI(ctx)};
-        const scope = this.createScope(ctx, engine);
+        const engine = { api: this.createAPI(ctx) };
+        const scope = this.createScope(ctx);
 
         if (actionId && ActionRegistry.get(actionId)) {
             const action = ActionRegistry.get(actionId);
-            const actionScope = this.createScope(ctx, engine);
+            const actionScope = this.createScope(ctx);
             this.runScript(action, ctx, engine, actionScope);
         }
 
