@@ -25,8 +25,8 @@ export function tokenize(input) {
 
         { type: "FOR", reg: /^\$\{\s*for\s+(_\w+)\s*,\s*(_\w+)\s+in\s+(.*?)\}/ },
         { type: "FOR_END", reg: /^\$\{\s*\/for\}/ },
-        // expression (only show var)
-        { type: "EXPRESSION", reg: /^\$\{\s*=\s*([$|_]\w+(?:\.[\w]+|\[\d+\]|\["[^"]+"\]|\['[^']+'\])*)\s*\}/ },
+        // expression
+        { type: "EXPRESSION", reg: /^\$\{\s*=\s*(.*?)\s*\}/ },
         // link #{text|passageId(optional)}{codeBlock}
         { type: "LINK", reg: /^\#\{\s*("[^"]+"|'[^']+'|\$[\w.\[\]\$"']+|\_[\w.\[\]\$"']+)\s*(?:\|\s*("[^"]+"|'[^']+'|\$[\w.\[\]\$"']+|\_[\w.\[\]\$"']+)\s*)?\}/ }
     ];
