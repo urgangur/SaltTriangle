@@ -63,10 +63,17 @@ function renderFor(node, ctx) {
     // Array case
     if (Array.isArray(data)) {
         data.forEach((value, index) => {
-            const childCtx = Object.create(ctx);
+            const childCtx = {
+                variables: {
+                    ...ctx.variables,
+                    __temp: {
+                        ...(ctx.variables.__temp || {})
+                    }
+                }
+            };
 
-            childCtx[node.k] = index;
-            childCtx[node.v] = value;
+            if (node.k) childCtx.variables.__temp[node.k] = index;
+            if (node.v) childCtx.variables.__temp[node.v] = value;
 
             out += node.children
                 .map(n => renderNode(n, childCtx))
@@ -78,11 +85,18 @@ function renderFor(node, ctx) {
 
     // Object / Map case
     if (typeof data === 'object') {
-        for (const key in data) {
-            const childCtx = Object.create(ctx);
+        for (const key of Object.keys(data)) {
+            const childCtx = {
+                variables: {
+                    ...ctx.variables,
+                    __temp: {
+                        ...(ctx.variables.__temp || {})
+                    }
+                }
+            };
 
-            childCtx[node.k] = key;
-            childCtx[node.v] = data[key];
+            childCtx.variables.__temp[node.k] = key;
+            childCtx.variables.__temp[node.v] = data[key];
 
             out += node.children
                 .map(n => renderNode(n, childCtx))
@@ -101,8 +115,8 @@ window.STEngine = class STEngine {
         this.currentPassage = null;
     }
 
-    runScript(script, ctx, engine, scope) {
-        return new Function('State', 'engine', 'scope', 'api', script)(ctx, engine, scope, engine.api);
+    runScript(script, ctx, scope, api) {
+        return new Function('State', 'scope', 'api', script)(ctx, scope, api);
     }
 
     createAPI(ctx) {
@@ -113,7 +127,8 @@ window.STEngine = class STEngine {
             save: (slot = 'default') => this.save(slot),
             load: (slot = 'default') => this.load(slot),
             export: (filename) => this.export(filename),
-            import: () => this.import()
+            import: () => this.import(),
+            getSaveMeta: () => this.getSaveMeta()
         }
     }
 
@@ -232,34 +247,34 @@ window.STEngine = class STEngine {
         if (!passage) throw new Error(`Passage "${passageId}" not found.`);
 
         const ctx = State;
-        const engine = { api: this.createAPI(ctx) };
+        const api = this.createAPI(ctx);
         const scope = this.createScope(ctx);
 
         this.currentPassage = passage;
         ctx.currPassage = passageId;
 
         this.currentSnapshot = JSON.stringify(ctx);
-        this.save('auto');
+        if (!passage.tags.includes('nosave')) this.save('auto');
 
-        if (passage.onEnter) this.runScript(passage.onEnter, ctx, engine, scope);
+        if (passage.onEnter) this.runScript(passage.onEnter, ctx, scope, api);
 
         this.render(passage, ctx);
         if (passage.afterRendered) {
             requestAnimationFrame(() => {
-                this.runScript(passage.afterRendered, ctx, engine, scope);
+                this.runScript(passage.afterRendered, ctx, scope, api);
             });
         }
     }
 
     goTo(passageId, actionId) {
         const ctx = State;
-        const engine = { api: this.createAPI(ctx) };
+        const api = this.createAPI(ctx);
         const scope = this.createScope(ctx);
 
         if (actionId && ActionRegistry.get(actionId)) {
             const action = ActionRegistry.get(actionId);
             const actionScope = this.createScope(ctx);
-            this.runScript(action, ctx, engine, actionScope);
+            this.runScript(action, ctx, actionScope, api);
         }
 
         if (this.currentPassage.id === passageId) {
@@ -267,8 +282,8 @@ window.STEngine = class STEngine {
             return;
         }
 
-        if (this.currentPassage.onExit) this.runScript(this.currentPassage.onExit, ctx, engine, scope);
-        else engine.api.clearTemp();
+        if (this.currentPassage.onExit) this.runScript(this.currentPassage.onExit, ctx, scope, api);
+        else api.clearTemp();
 
         this.runPassage(passageId);
     }
