@@ -257,8 +257,8 @@ export function parse(tokens) {
                 if (currentSlot === 'onEnter' || currentSlot === 'onExit' || currentSlot === 'afterRendered') throw new Error(`FOR is not allowed in "${currentSlot}`);
                 const forNode = {
                     type: 'FOR',
-                    k: token.k,
-                    v: token.v,
+                    k: token.k.slice(1),
+                    v: token.v.slice(1),
                     iterable: token.iterable,
                     children: []
                 };
