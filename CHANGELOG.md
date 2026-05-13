@@ -5,7 +5,7 @@ Changed
  - Script Block: would not fetch engine but only api
  - Autosave: would not auto save when passage.tags includes "nosave"
 Fixed
- - Core Logics: fix FIR node not being handled correctly
+ - Core Logics: fix FOR node not being handled correctly
  - Lexer: fix EXPRESSION node not handle correctly at some cases
 
 # v0.2.0 [2026/5/10]
@@ -44,9 +44,9 @@ Fixed
 # v0.1.0 [2026/5/1]
 Added
  - Core Logics: implement basic ST language
-   - IF、FOR、EXPRESSION nodes
-   - LINK node 
-   - onEnter、onExit hooks
+    - IF、FOR、EXPRESSION nodes
+    - LINK node 
+    - onEnter、onExit hooks
  - Layout System: support for processing user-defined layouts
  - Module System: support for processing user-defined modules
  - Build System: initial setup
