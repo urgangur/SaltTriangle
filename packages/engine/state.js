@@ -3,6 +3,6 @@ window.State = {
     currPassage: "Start",
     version: null,
     config: {
-        maxHistory: 1
+        maxHistory: 10
     }
 }
