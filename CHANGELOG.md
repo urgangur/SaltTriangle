@@ -1,3 +1,12 @@
+# v0.3.0 [2026/5/14]
+Added
+ - API: add undo, redo, canUndo, canRedo, setMigrator, setExporter, compareVersion functions
+ - Save and Load: when loaded data is older version than current version, would apply migrator function.
+ - Build: add version check
+Changed
+ - Build: change config.json parsing process
+ - Save and Load: when passage have "nosave" tag, would not be saved to passage history also.
+
 # v0.2.1 [2026/5/11]
 Added
  - API: add getSaveMeta function
