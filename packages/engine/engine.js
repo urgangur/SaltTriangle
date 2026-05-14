@@ -113,6 +113,63 @@ window.STEngine = class STEngine {
     constructor(passages) {
         this.passages = passages;
         this.currentPassage = null;
+        this.history = [];
+        this.redoStack = [];
+        this._migrator = this.defaultMigrator.bind(this);
+        this._exporter = this.defaultExporter.bind(this);
+    }
+
+    setMigrator(fn) {
+        if (typeof fn === 'function') {
+            this._migrator = fn.bind(this);
+        } else {
+            console.error("[SaltTriangle] setMigrator requires a function.");
+        }
+    }
+
+    setExporter(fn) {
+        if (typeof fn === 'function') {
+            this._exporter = fn.bind(this);
+        } else {
+            console.error("[SaltTriangle] setExporter requires a function.");
+        }
+    }
+
+    static compareVersion(v1, v2) {
+        const versionRegex = /^(\d+)\.(\d+)\.(\d+)$/;
+        const p1 = versionRegex.exec(v1);
+        const p2 = versionRegex.exec(v2);
+        if (!p1 || !p2) {
+            console.error(`[SaltTriangle] Invalid version format: ${v1} or ${v2}`);
+            return 0;
+        }
+        for (let i = 1; i < 4; i++) {
+            if (p1[i] > p2[i]) return 1;
+            if (p1[i] < p2[i]) return -1;
+        }
+        return 0;
+    }
+
+    compareVersion(v1, v2) {
+        return STEngine.compareVersion(v1, v2);
+    }
+
+    defaultMigrator(saveData, currentVersion) {
+        const saveVersion = saveData.version;
+        if (!saveVersion || !currentVersion) return saveData;
+
+        const cmp = this.compareVersion(saveVersion, currentVersion);
+        if (cmp > 0) {
+            console.warn(`[SaltTriangle] Warning: Loading save from newer version (${saveVersion}) into older game (${currentVersion}).`);
+        } else if (cmp < 0) {
+            console.log(`[SaltTriangle] Migrating older save (${saveVersion}) to current version (${currentVersion}).`);
+            saveData.version = currentVersion;
+        }
+        return saveData;
+    }
+
+    defaultExporter(saveData) {
+        return saveData;
     }
 
     runScript(script, ctx, scope, api) {
@@ -121,20 +178,50 @@ window.STEngine = class STEngine {
 
     createAPI(ctx) {
         return {
-            clearTemp: () => {
-                Object.keys(ctx.variables.__temp).forEach(k => delete ctx.variables.__temp[k]);
-            },
+            clearTemp: () => Object.keys(ctx.variables.__temp).forEach(k => delete ctx.variables.__temp[k]),
             save: (slot = 'default') => this.save(slot),
             load: (slot = 'default') => this.load(slot),
             export: (filename) => this.export(filename),
             import: () => this.import(),
-            getSaveMeta: () => this.getSaveMeta()
+            getSaveMeta: () => this.getSaveMeta(),
+            undo: () => this.undo(),
+            redo: () => this.redo(),
+            canUndo: () => this.history.length > 0,
+            canRedo: () => this.redoStack.length > 0,
+            setMigrator: (fn) => this.setMigrator(fn),
+            setExporter: (fn) => this.setExporter(fn),
+            compareVersion: (v1, v2) => this.compareVersion(v1, v2)
         }
+    }
+
+    undo() {
+        if (this.history.length === 0) return false;
+        this.redoStack.push(this.currentSnapshot);
+        const snapshot = this.history.pop();
+        this.applySnapshot(snapshot);
+        return true;
+    }
+
+    redo() {
+        if (this.redoStack.length === 0) return false;
+        this.history.push(this.currentSnapshot);
+        const snapshot = this.redoStack.pop();
+        this.applySnapshot(snapshot);
+        return true;
+    }
+
+    applySnapshot(snapshot) {
+        const parsedData = typeof snapshot === 'string' ? JSON.parse(snapshot) : snapshot;
+        Object.keys(State).forEach(key => delete State[key]);
+        Object.assign(State, parsedData);
+        this.runPassage(parsedData.currPassage, true);
     }
 
     save(slot = 'default') {
         try {
-            const dataToSave = this.currentSnapshot;
+            let parsedData = JSON.parse(this.currentSnapshot);
+            if (this._exporter) parsedData = this._exporter(parsedData);
+            const dataToSave = JSON.stringify(parsedData);
             localStorage.setItem(`st_save_${slot}`, dataToSave);
             // -- save meta --
             let meta = {};
@@ -165,10 +252,15 @@ window.STEngine = class STEngine {
         try {
             const data = localStorage.getItem(`st_save_${slot}`);
             if (!data) return false;
-            Object.keys(State).forEach(key => delete State[key]);
-            const parsedData = JSON.parse(data);
-            Object.assign(State, parsedData);
-            this.runPassage(parsedData.currPassage);
+            let parsedData = JSON.parse(data);
+            if (this._migrator) {
+                parsedData = this._migrator(parsedData, State.version);
+            }
+            this.history = [];
+            this.redoStack = [];
+
+
+            this.applySnapshot(parsedData);
             return true;
         } catch (e) {
             console.error("Load failed:", e);
@@ -178,7 +270,9 @@ window.STEngine = class STEngine {
 
     export(filename = 'save.json') {
         try {
-            const data = this.currentSnapshot;
+            let parsedData = JSON.parse(this.currentSnapshot);
+            if (this._exporter) parsedData = this._exporter(parsedData);
+            const data = JSON.stringify(parsedData, null, 2);
             const blob = new Blob([data], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -209,10 +303,13 @@ window.STEngine = class STEngine {
                 const reader = new FileReader();
                 reader.onload = event => {
                     try {
-                        const parsedData = JSON.parse(event.target.result);
-                        Object.keys(State).forEach(key => delete State[key]);
-                        Object.assign(State, parsedData);
-                        this.runPassage(parsedData.currPassage);
+                        let parsedData = JSON.parse(event.target.result);
+                        if (this._migrator) {
+                            parsedData = this._migrator(parsedData, State.version);
+                        }
+                        this.history = [];
+                        this.redoStack = [];
+                        this.applySnapshot(parsedData);
                         resolve(true);
                     } catch (err) {
                         console.error("Import failed:", err);
@@ -242,9 +339,18 @@ window.STEngine = class STEngine {
         });
     }
 
-    runPassage(passageId) {
+    runPassage(passageId, skipHistory = false) {
         const passage = this.passages[passageId];
         if (!passage) throw new Error(`Passage "${passageId}" not found.`);
+
+        if (!skipHistory || passage.tags.includes('nosave')) {
+            if (this.currentSnapshot) {
+                this.history.push(this.currentSnapshot);
+                const max = State.config.maxHistory || 10;
+                if (this.history.length > max) this.history.shift();
+            }
+            this.redoStack = []; // New action clears redo stack
+        }
 
         const ctx = State;
         const api = this.createAPI(ctx);
