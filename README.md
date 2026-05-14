@@ -1,8 +1,5 @@
 # SaltTriangle
 
-[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](CHANGELOG.md)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
-
 **SaltTriangle** is a framework for building text-based RPGs and interactive narratives for the web. It provides a specialized scripting language and a flexible runtime engine to streamline the development of logic-heavy story games.
 
 ## Getting Started
