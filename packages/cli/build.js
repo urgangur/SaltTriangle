@@ -12,6 +12,10 @@ fs.rmSync(path.join(root, "dist"), { recursive: true, force: true });
 const configPath = path.join(root, "config.json");
 if (!fs.existsSync(configPath)) throw new Error("Config file not found.")
 const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+const versionRegex = /^\d+\.\d+\.\d+$/;
+if (!config.version || !versionRegex.test(config.version)) {
+    throw new Error("Invalid or missing 'version' in config.json. It must match the format 'XX.XX.XX' (e.g., '1.0.0').");
+}
 
 // ---1. parse .st files
 const gameDir = path.join(root, "game");
@@ -38,7 +42,7 @@ for (const file of stFiles) {
     const tokens = tokenize(source);
     const parsed = parse(tokens);
     if (!parsed || typeof parsed !== "object") throw new Error(`Failed to parse ${file}`);
-    passages = {...passages,...parsed };
+    passages = { ...passages, ...parsed };
 }
 
 // ---2. passages to js
@@ -54,7 +58,7 @@ export function passagesToJS(passages) {
         output += `    onEnter: ${passage.onEnter ? JSON.stringify(passage.onEnter) : "null"},\n`;
         output += `    afterRendered: ${passage.afterRendered ? JSON.stringify(passage.afterRendered) : "null"},\n`;
         output += `    onExit: ${passage.onExit ? JSON.stringify(passage.onExit) : "null"},\n`;
-        
+
         output += `    slots: {\n`;
         for (const [slotName, nodes] of Object.entries(passage.slots)) {
             output += `      "${slotName}": [\n`;
@@ -80,7 +84,7 @@ function serializeNode(node) {
             content: ${JSON.stringify(node.content)} 
         }`;
     }
-    
+
     return JSON.stringify(node);
 }
 
@@ -167,11 +171,23 @@ for (const layout of layoutsSet) {
 
 // ---f. index.html 
 let html = templateHTML
-html = html.split("{{TITLE}}").join(config.title);
+html = html.split("{{TITLE}}").join(config.title || "Untitled Game");
 html = html.split("{{ICON}}").join(config.icon ? `<link rel="icon" href="${config.icon}">` : "");
 html = html.split("{{CSS}}").join(cssInline);
 html = html.split("{{ENGINE}}").join("<script type='module'>" + ENGINE_CODE + ";window.__EngineReady = true" + "</script>");
-html = html.split("{{STATE}}").join("<script>" + STATE_CODE + "</script>");
+// 其實我覺得可以直接寫入才對 但目前不知道怎麼改
+html = html.split("{{STATE}}").join("<script>" + STATE_CODE + `
+;(function(){
+    const userConfig = ${JSON.stringify(config)};
+    const { title, icon, version, ...engineConfig } = userConfig;
+    State.version = version || "0.0.0";
+    for (const key in engineConfig) {
+        if (engineConfig[key] !== null && engineConfig[key] !== undefined) {
+            window.State.config[key] = engineConfig[key];
+        }
+    }
+})()
+</script>`);
 html = html.split("{{LAYOUTS}}").join("<script>" + layoutsScript + "</script>");
 html = html.split("{{PASSAGES}}").join("<script>" + passagesToJS(passages) + "</script>");
 html = html.split("{{SCRIPTS}}").join(jsInline);
