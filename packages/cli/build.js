@@ -4,6 +4,7 @@ import { tokenize } from "../compiler/lexer.js"
 import { parse } from "../compiler/parser.js"
 import { templateHTML } from "../cli/index.html.js"
 import { ENGINE_CODE, STATE_CODE } from './assets_manifest.js';
+import { printStats } from "./stat.js";
 
 // ---0. init
 const root = process.cwd();
@@ -193,3 +194,5 @@ html = html.split("{{PASSAGES}}").join("<script>" + passagesToJS(passages) + "</
 html = html.split("{{SCRIPTS}}").join(jsInline);
 
 fs.writeFileSync(path.join(root, "dist/index.html"), html);
+
+printStats(passages);
