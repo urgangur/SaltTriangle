@@ -1,3 +1,7 @@
+# v0.4.0 [2026/5/18]
+Added
+ - Build: add statistics on build process
+
 # v0.3.0 [2026/5/14]
 Added
  - API: add undo, redo, canUndo, canRedo, setMigrator, setExporter, compareVersion functions
