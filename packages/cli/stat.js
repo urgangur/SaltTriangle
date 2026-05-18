@@ -14,7 +14,8 @@ export function printStats(passages) {
         function walk(nodes) {
             for (const node of nodes) {
                 if (node.type === 'TEXT') {
-                    const text = node.value.replace(/\s+/g, '');
+                    // 很簡單的清除html tag，目前懶的改
+                    const text = node.value.replace(/<\/?(?:[a-zA-Z][a-zA-Z0-9:-]*)(?:\s+[^>]*)?>/gm, '').replace(/\s+/g, '');
                     pCharCount += text.length;
                 } else if (node.type === 'LINK') {
                     totalLinks++;

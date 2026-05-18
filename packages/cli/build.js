@@ -195,4 +195,5 @@ html = html.split("{{SCRIPTS}}").join(jsInline);
 
 fs.writeFileSync(path.join(root, "dist/index.html"), html);
 
+// 應該要可以開放不輸出 之後改(預設輸出)
 printStats(passages);
